@@ -1,5 +1,5 @@
 @(repository: gitbucket.core.service.RepositoryService.RepositoryInfo,
-  commitGraphs: Seq[me.huzi.gitbucket.commitgraphs.controller.CommitGraph])(implicit context: gitbucket.core.controller.Context)
+  commitGraphs: Seq[me.huzi.gitbucket.commitgraphs.service.CommitGraph])(implicit context: gitbucket.core.controller.Context)
 @import context._
 @import gitbucket.core.view.helpers._
 @import java.time.Instant
@@ -30,7 +30,7 @@
       <script>
         var dateLabels@i = [
           @cg.dailys.map { d =>
-            @{"new Date(%4d,%2d,%2d,0,0,0),".format(d.date.getYear()+1900,d.date.getMonth(),d.date.getDate()) }
+            @{"new Date(%4d,%2d,%2d,0,0,0),".format(d.date.getYear,d.date.getMonthValue-1,d.date.getDayOfMonth) }
           }
         ];
         var data@i = {
