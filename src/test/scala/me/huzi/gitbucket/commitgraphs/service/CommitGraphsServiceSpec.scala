@@ -140,6 +140,15 @@ class CommitGraphsServiceSpec extends AnyFunSuite {
     }
   }
 
+  test("getCommitCounts with a missing git command fails with an IOException") {
+    withRepo { (git, dir) =>
+      commit(git, dir, "a.txt", "a\n", "Alice", "alice@example.com", "2026-09-01")
+      assertThrows[java.io.IOException] {
+        new CommitGraphsService with AccountService {}.getCommitCounts(git, "/nonexistent/git")
+      }
+    }
+  }
+
   test("aggregate orders contributors with the same number of commits by name") {
     val graphs = CommitGraphsService.aggregate(
       Seq("dave", "Carol", "bob", "alice", "Eve").map(n => count(s"$n@example.com", "2026-09-01", 1))

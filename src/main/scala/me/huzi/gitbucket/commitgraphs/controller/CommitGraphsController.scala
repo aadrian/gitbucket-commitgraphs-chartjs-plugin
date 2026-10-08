@@ -1,5 +1,6 @@
 package me.huzi.gitbucket.commitgraphs.controller
 
+import java.io.IOException
 import scala.util.Using
 import org.eclipse.jgit.api.Git
 import gitbucket.core.controller._
@@ -8,6 +9,7 @@ import gitbucket.core.util._
 import gitbucket.core.util.Directory._
 import gitbucket.core.util.Implicits._
 import org.scalatra.forms._
+import org.slf4j.LoggerFactory
 import me.huzi.gitbucket.commitgraphs.service.{CommitGraphsService, CommitGraphsSettingsService}
 import me.huzi.gitbucket.commitgraphs.service.CommitGraphsSettingsService._
 import me.huzi.gitbucket.commitgraphs.html
@@ -28,6 +30,8 @@ trait CommitGraphsControllerBase extends ControllerBase {
     with AdminAuthenticator
     with CommitGraphsService
     with CommitGraphsSettingsService =>
+
+  private val logger = LoggerFactory.getLogger(classOf[CommitGraphsControllerBase])
 
   val settingsForm: MappingValueType[CommitGraphsSettings] = mapping(
     "commitGraphsGitCommand" -> text(required, maxlength(200)),
@@ -60,10 +64,12 @@ trait CommitGraphsControllerBase extends ControllerBase {
       if (JGitUtil.isEmpty(git)) {
         html.guide(repository)
       } else {
+        val gitCommand = loadCommitGraphsSettings().CommitGraphsGitCommand
         try {
-          html.list(repository, getCommitGraphs(git, loadCommitGraphsSettings().CommitGraphsGitCommand))
+          html.list(repository, getCommitGraphs(git, gitCommand))
         } catch {
-          case _: Throwable =>
+          case e: IOException =>
+            logger.warn(s"Running '$gitCommand' for ${repository.owner}/${repository.name} failed", e)
             html.error(repository)
         }
       }
