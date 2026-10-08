@@ -71,9 +71,9 @@ class CommitGraphsServiceSpec extends AnyFunSuite {
     assert((c.groupKey, c.authorName, c.authorEmailAddress) == (("alice@example.com", "Alice", "alice@example.com")))
   }
 
-  test("a commit committed by someone else counts for the committer's address") {
+  test("a commit committed by someone else (rebase, cherry-pick) counts for its author") {
     val c = CommitCount(commitInfo("Bob", "bob@example.com", "Carol", "carol@example.com"), 1, 0)
-    assert((c.groupKey, c.authorName) == (("carol@example.com", "Bob")))
+    assert((c.groupKey, c.authorName) == (("bob@example.com", "Bob")))
   }
 
   test("getCommitGraphs reads the line counts with git") {

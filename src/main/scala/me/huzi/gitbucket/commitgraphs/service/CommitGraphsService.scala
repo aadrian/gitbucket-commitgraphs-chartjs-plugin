@@ -107,7 +107,7 @@ case class CommitCount(
 object CommitCount {
   def apply(commit: CommitInfo, additions: Long, deletions: Long): CommitCount =
     CommitCount(
-      groupKey = if (commit.isDifferentFromAuthor) commit.committerEmailAddress else commit.authorEmailAddress,
+      groupKey = commit.authorEmailAddress,
       authorName = commit.authorName,
       authorEmailAddress = commit.authorEmailAddress,
       authorTime = commit.authorTime,
