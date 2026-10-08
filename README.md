@@ -13,6 +13,20 @@ GitBucket Commit Graphs Chart.js Plugin includes chart.js and can be used in clo
 
 The git command is required.
 
+## Compatibility
+
+Plugin version | GitBucket version
+:--------------|:-----------------
+0.2.x          | 4.48.x -
+0.1.x          | 4.36.x - 4.47.x
+
+GitBucket 4.48.0 changed the authentication helpers used by the settings page, so 0.1.x fails to start there.
+
+## Build
+
+- `sbt assembly`
+- Copy `target/scala-2.13/gitbucket-commitgraphs-chartjs-plugin-x.x.x.jar` into `~/.gitbucket/plugins` and restart GitBucket.
+
 ## Usage
 
 Click "Commit Graphs(chart.js)" in the repository menu. Then, you will see the graph below.

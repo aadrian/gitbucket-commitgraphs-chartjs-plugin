@@ -41,7 +41,7 @@ trait CommitGraphsControllerBase extends ControllerBase {
     html.settings(settings.CommitGraphsGitCommand, None)
   })
 
-  post("/admin/commitgraphs-chartjs", settingsForm)(adminOnly { form =>
+  post("/admin/commitgraphs-chartjs", settingsForm)(adminOnlyWithForm { form =>
     assert(form.CommitGraphsGitCommand != null)
     assert(!form.CommitGraphsGitCommand.isEmpty)
     form.action match {
