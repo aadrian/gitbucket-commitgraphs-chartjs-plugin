@@ -69,7 +69,3 @@ trait CommitGraphsControllerBase extends ControllerBase {
     }
   })
 }
-
-object CommitGraphsController {
-  def sumNumstat(lines: Iterable[String]): (Int, Int) = CommitGraphsService.sumNumstat(lines)
-}
