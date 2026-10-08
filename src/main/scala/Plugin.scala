@@ -13,7 +13,8 @@ class Plugin extends gitbucket.core.plugin.Plugin {
 
   override val versions: Seq[Version] = Seq(
     new Version("0.1.0"),
-    new Version("0.1.1")
+    new Version("0.1.1"),
+    new Version("0.2.0")
   )
 
   override val controllers = Seq(
@@ -28,12 +29,12 @@ class Plugin extends gitbucket.core.plugin.Plugin {
         id = pluginId,
         label = pluginName,
         path = s"/commitgraphs-chartjs",
-        icon = Some("menu-icon octicon octicon-graph")
+        icon = Some("graph")
       )
     )
   )
 
   override val systemSettingMenus: Seq[(Context) => Option[Link]] =
-    Seq((ctx: Context) => Some(Link(pluginId, pluginName, "admin/commitgraphs-chartjs", Some("octicon octicon-graph"))))
+    Seq((ctx: Context) => Some(Link(pluginId, pluginName, "admin/commitgraphs-chartjs", Some("graph"))))
 
 }

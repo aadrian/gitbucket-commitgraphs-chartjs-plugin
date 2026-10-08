@@ -6,9 +6,9 @@
 @import gitbucket.core.view.helpers._
 @import gitbucket.core.util.Directory._
 @main("Commit Graph"){
-@menu("Commit Graph"){
+@menu("commitgraphs-chartjs"){
 @information(info)
-<form action="@path/admin/commitgraphs" method="POST" validate="true">
+<form action="@path/admin/commitgraphs-chartjs" method="POST" validate="true">
     <div class="panel panel-default">
         <div class="panel-heading strong">Commit Graph Settings</div>
         <div class="panel-body">
@@ -25,13 +25,5 @@
         <input type="submit" class="btn" value="Check git command" onClick="$('#action').val('check')"/>
     </fieldset>
 </form>
-<script type="text/javascript">
-    document.querySelectorAll('.menu-item-hover').forEach((node, index) => {
-        node.classList.remove('active');
-        if (node.querySelector('span').textContent.trim() === 'Commit Graphs(chart.js)') {
-            node.classList.add('active');
-        }
-    });
-</script>
 }
 }

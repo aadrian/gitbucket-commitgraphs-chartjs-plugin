@@ -5,20 +5,12 @@
 @import java.time.Instant
 @import java.time.ZoneId
 @gitbucket.core.html.main("Commit Graphs", Some(repository)){
-  @gitbucket.core.html.menu("commitgraphs", repository){
+  @gitbucket.core.html.menu("commitgraphs-chartjs", repository){
 
     <script src="@context.path/plugin-assets/commitgraphs-chartjs/chart.umd.min.js"></script>
     <script src="@context.path/plugin-assets/commitgraphs-chartjs/luxon.js"></script>
     <script src="@context.path/plugin-assets/commitgraphs-chartjs/chartjs-adapter-luxon.js"></script>
 
-    <script type="text/javascript">
-      document.querySelectorAll('.menu-item-hover').forEach((node, index) => {
-        node.classList.remove('active');
-        if (node.querySelector('span').textContent.trim() === 'Commit Graphs(chart.js)') {
-          node.classList.add('active');
-        }
-      });
-    </script>
     <div class="row-fluid">
     @commitGraphs.zipWithIndex.map { case (cg, i) =>
       <div class="col-md-6">
