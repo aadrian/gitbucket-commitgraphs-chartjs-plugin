@@ -78,15 +78,7 @@ trait CommitGraphsControllerBase extends ControllerBase {
                 ),
                 git.getRepository.getDirectory
               )
-              val (additions, deletions) =
-                p.lazyLines_!.filter(_.split("\t").length == 3).foldLeft((0, 0)) { (i, l) =>
-                  val Array(a, d, filename) = l.split("\t")
-                  if (a.forall(_.isDigit) && d.forall(_.isDigit)) {
-                    (i._1 + a.toInt, i._2 + d.toInt)
-                  } else {
-                    i
-                  }
-                }
+              val (additions, deletions) = CommitGraphsController.sumNumstat(p.lazyLines_!)
               CommitCount(commit = new CommitInfo(rev), additions = additions, deletions = deletions)
             }
             .toSeq
@@ -148,6 +140,20 @@ trait CommitGraphsControllerBase extends ControllerBase {
 
   private def date2DateStr(date: java.util.Date): String = new java.text.SimpleDateFormat("yyyy-MM-dd").format(date)
   private def dateStr2Date(date: String): java.util.Date = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(date)
+}
+
+object CommitGraphsController {
+
+  /** Sums the added and deleted lines of `git log --numstat` output; binary files ("-") are skipped. */
+  def sumNumstat(lines: Iterable[String]): (Int, Int) =
+    lines.filter(_.split("\t").length == 3).foldLeft((0, 0)) { (i, l) =>
+      val Array(a, d, filename) = l.split("\t")
+      if (a.forall(_.isDigit) && d.forall(_.isDigit)) {
+        (i._1 + a.toInt, i._2 + d.toInt)
+      } else {
+        i
+      }
+    }
 }
 
 case class CommitCount(commit: CommitInfo, additions: Long, deletions: Long)
