@@ -1,5 +1,5 @@
 @(repository: gitbucket.core.service.RepositoryService.RepositoryInfo,
-  commitGraphs: Seq[me.huzi.gitbucket.commitgraphs.controller.CommitGraph])(implicit context: gitbucket.core.controller.Context)
+  commitGraphs: Seq[me.huzi.gitbucket.commitgraphs.service.CommitGraph])(implicit context: gitbucket.core.controller.Context)
 @import context._
 @import gitbucket.core.view.helpers._
 @import java.time.Instant
