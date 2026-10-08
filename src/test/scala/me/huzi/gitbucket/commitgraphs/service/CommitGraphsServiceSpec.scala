@@ -1,7 +1,7 @@
 package me.huzi.gitbucket.commitgraphs.service
 
 import java.nio.file.{Files, Path}
-import java.time.{LocalDate, ZoneId}
+import java.time.{Instant, LocalDate, ZoneId}
 import java.util.Date
 import scala.util.Using
 import org.eclipse.jgit.api.Git
@@ -79,10 +79,17 @@ class CommitGraphsServiceSpec extends AnyFunSuite {
     assert(alice.userName == "alice")
     assert(
       alice.dailys.map(d => (d.date, d.commits, d.additions, d.deletions)) == Seq(
-        (day("2026-09-01", 0), 1, 1, 0),
-        (day("2026-09-02", 0), 2, 5, 3)
+        (LocalDate.parse("2026-09-01"), 1, 1, 0),
+        (LocalDate.parse("2026-09-02"), 2, 5, 3)
       )
     )
+  }
+
+  test("aggregate counts the day in the given time zone") {
+    val lateUtc = CommitCount("alice", "alice@example.com", Date.from(Instant.parse("2026-09-01T23:30:00Z")), 1, 0)
+    def days(zone: String) = CommitGraphsService.aggregate(Seq(lateUtc), zone = ZoneId.of(zone)).head.dailys.map(_.date)
+    assert(days("UTC") == Seq(LocalDate.parse("2026-09-01")))
+    assert(days("Europe/Berlin") == Seq(LocalDate.parse("2026-09-02")))
   }
 
   test("aggregate groups all addresses of a GitBucket account, ignoring case") {
@@ -136,7 +143,7 @@ class CommitGraphsServiceSpec extends AnyFunSuite {
           ("Bob", 1, 1, 0)
         )
       )
-      assert(graphs.head.dailys.map(_.date) == Seq(day("2026-09-01", 0), day("2026-09-02", 0)))
+      assert(graphs.head.dailys.map(_.date) == Seq(LocalDate.parse("2026-09-01"), LocalDate.parse("2026-09-02")))
     }
   }
 

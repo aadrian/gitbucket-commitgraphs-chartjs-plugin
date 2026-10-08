@@ -1,6 +1,7 @@
 package me.huzi.gitbucket.commitgraphs.service
 
 import java.io.File
+import java.time.{LocalDate, ZoneId}
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 import scala.sys.process._
@@ -65,9 +66,14 @@ object CommitGraphsService {
 
   /**
    * Groups the commits per contributor (most commits first, then by name), with daily counts in date order. A contributor is the
-   * GitBucket account of the author's address (`accountOf`), else the address ignoring case.
+   * GitBucket account of the author's address (`accountOf`), else the address ignoring case. Days are counted by
+   * the author time in `zone`.
    */
-  def aggregate(counts: Seq[CommitCount], accountOf: String => Option[Account] = _ => None): Seq[CommitGraph] =
+  def aggregate(
+      counts: Seq[CommitCount],
+      accountOf: String => Option[Account] = _ => None,
+      zone: ZoneId = ZoneId.systemDefault
+  ): Seq[CommitGraph] =
     counts
       .groupBy(c => accountOf(c.authorEmailAddress).toRight(c.authorEmailAddress.toLowerCase))
       .toSeq
@@ -77,7 +83,7 @@ object CommitGraphsService {
           case Left(_)        => (ds.head.authorName, ds.head.authorEmailAddress)
         }
         val dailys = ds
-          .groupBy(x => date2DateStr(x.authorTime))
+          .groupBy(x => LocalDate.ofInstant(x.authorTime.toInstant, zone))
           .map { case (date, ds) =>
             val (additions, deletions) = ds.foldLeft((0L, 0L)) { (i, d) =>
               (i._1 + d.additions, i._2 + d.deletions)
@@ -85,14 +91,14 @@ object CommitGraphsService {
             DailyCount(
               userName = userName,
               mailAddress = mailAddress,
-              date = dateStr2Date(date),
+              date = date,
               commits = ds.length,
               additions = additions,
               deletions = deletions
             )
           }
           .toSeq
-          .sortWith((lt1, lt2) => lt1.date.compareTo(lt2.date) < 0)
+          .sortBy(_.date)
 
         val (additions, deletions) = dailys.foldLeft((0L, 0L)) { (i, d) =>
           (i._1 + d.additions, i._2 + d.deletions)
@@ -107,9 +113,6 @@ object CommitGraphsService {
         )
       }
       .sortBy(g => (-g.commits, g.userName.toLowerCase, g.mailAddress.toLowerCase))
-
-  private def date2DateStr(date: java.util.Date): String = new java.text.SimpleDateFormat("yyyy-MM-dd").format(date)
-  private def dateStr2Date(date: String): java.util.Date = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(date)
 }
 
 /** One commit: its author and line counts. */
@@ -135,7 +138,7 @@ object CommitCount {
 case class DailyCount(
     userName: String,
     mailAddress: String,
-    date: java.util.Date,
+    date: LocalDate,
     commits: Long,
     additions: Long,
     deletions: Long
