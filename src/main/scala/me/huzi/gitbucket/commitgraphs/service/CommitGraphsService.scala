@@ -64,14 +64,13 @@ object CommitGraphsService {
   }
 
   /**
-   * Groups the commits per contributor (most commits first), with daily counts in date order. A contributor is the
+   * Groups the commits per contributor (most commits first, then by name), with daily counts in date order. A contributor is the
    * GitBucket account of the author's address (`accountOf`), else the address ignoring case.
    */
   def aggregate(counts: Seq[CommitCount], accountOf: String => Option[Account] = _ => None): Seq[CommitGraph] =
     counts
       .groupBy(c => accountOf(c.authorEmailAddress).toRight(c.authorEmailAddress.toLowerCase))
       .toSeq
-      .sortWith((lt1, lt2) => lt1._2.lengthCompare(lt2._2.length) > 0)
       .map { case (contributor, ds) =>
         val (userName, mailAddress) = contributor match {
           case Right(account) => (account.userName, account.mailAddress)
@@ -107,6 +106,7 @@ object CommitGraphsService {
           dailys = dailys
         )
       }
+      .sortBy(g => (-g.commits, g.userName.toLowerCase, g.mailAddress.toLowerCase))
 
   private def date2DateStr(date: java.util.Date): String = new java.text.SimpleDateFormat("yyyy-MM-dd").format(date)
   private def dateStr2Date(date: String): java.util.Date = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(date)

@@ -140,6 +140,13 @@ class CommitGraphsServiceSpec extends AnyFunSuite {
     }
   }
 
+  test("aggregate orders contributors with the same number of commits by name") {
+    val graphs = CommitGraphsService.aggregate(
+      Seq("dave", "Carol", "bob", "alice", "Eve").map(n => count(s"$n@example.com", "2026-09-01", 1))
+    )
+    assert(graphs.map(_.userName) == Seq("alice", "bob", "Carol", "dave", "Eve"))
+  }
+
   test("isGitAvailable") {
     assert(CommitGraphsService.isGitAvailable("git"))
     assert(!CommitGraphsService.isGitAvailable("/nonexistent/git"))
