@@ -1,22 +1,34 @@
 package me.huzi.gitbucket.commitgraphs.service
 
 import java.io.File
+import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 import scala.sys.process._
 import org.eclipse.jgit.api.Git
+import gitbucket.core.model.Account
+import gitbucket.core.model.Profile.profile.blockingApi._
+import gitbucket.core.service.AccountService
 import gitbucket.core.util.JGitUtil.CommitInfo
 import me.huzi.gitbucket.commitgraphs.service.CommitGraphsService._
 
-trait CommitGraphsService {
+trait CommitGraphsService { self: AccountService =>
 
-  /** Commit statistics per contributor over all refs; runs `gitCommand` once per commit for the line counts. */
-  def getCommitGraphs(git: Git, gitCommand: String): Seq[CommitGraph] = {
+  /** Commit statistics per contributor over all refs; a GitBucket user's addresses count as one contributor. */
+  def getCommitGraphs(git: Git, gitCommand: String)(implicit s: Session): Seq[CommitGraph] = {
+    val accounts = mutable.Map[String, Option[Account]]()
+    aggregate(
+      getCommitCounts(git, gitCommand),
+      mail => accounts.getOrElseUpdate(mail.toLowerCase, getAccountByMailAddress(mail))
+    )
+  }
+
+  /** Line counts of all commits; runs `gitCommand` once per commit. */
+  def getCommitCounts(git: Git, gitCommand: String): Seq[CommitCount] = {
     val dir = git.getRepository.getDirectory
-    val counts = git.log.all.call.iterator.asScala.map { rev =>
+    git.log.all.call.iterator.asScala.map { rev =>
       val (additions, deletions) = numstat(gitCommand, dir, rev.getId.name)
       CommitCount(new CommitInfo(rev), additions, deletions)
     }.toSeq
-    aggregate(counts)
   }
 }
 
@@ -51,14 +63,20 @@ object CommitGraphsService {
     }
   }
 
-  /** Groups the commits per contributor (most commits first), with daily counts in date order. */
-  def aggregate(counts: Seq[CommitCount]): Seq[CommitGraph] =
+  /**
+   * Groups the commits per contributor (most commits first), with daily counts in date order. A contributor is the
+   * GitBucket account of the author's address (`accountOf`), else the address ignoring case.
+   */
+  def aggregate(counts: Seq[CommitCount], accountOf: String => Option[Account] = _ => None): Seq[CommitGraph] =
     counts
-      .groupBy(_.groupKey)
+      .groupBy(c => accountOf(c.authorEmailAddress).toRight(c.authorEmailAddress.toLowerCase))
       .toSeq
       .sortWith((lt1, lt2) => lt1._2.lengthCompare(lt2._2.length) > 0)
-      .map { case (mailAddress, ds) =>
-        val dh = ds.head
+      .map { case (contributor, ds) =>
+        val (userName, mailAddress) = contributor match {
+          case Right(account) => (account.userName, account.mailAddress)
+          case Left(_)        => (ds.head.authorName, ds.head.authorEmailAddress)
+        }
         val dailys = ds
           .groupBy(x => date2DateStr(x.authorTime))
           .map { case (date, ds) =>
@@ -66,8 +84,8 @@ object CommitGraphsService {
               (i._1 + d.additions, i._2 + d.deletions)
             }
             DailyCount(
-              userName = dh.authorName,
-              mailAddress = dh.authorEmailAddress,
+              userName = userName,
+              mailAddress = mailAddress,
               date = dateStr2Date(date),
               commits = ds.length,
               additions = additions,
@@ -81,7 +99,7 @@ object CommitGraphsService {
           (i._1 + d.additions, i._2 + d.deletions)
         }
         CommitGraph(
-          userName = dh.authorName,
+          userName = userName,
           mailAddress = mailAddress,
           commits = ds.length,
           additions = additions,
@@ -94,9 +112,8 @@ object CommitGraphsService {
   private def dateStr2Date(date: String): java.util.Date = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(date)
 }
 
-/** One commit: who it counts for, and its line counts. */
+/** One commit: its author and line counts. */
 case class CommitCount(
-    groupKey: String,
     authorName: String,
     authorEmailAddress: String,
     authorTime: java.util.Date,
@@ -107,7 +124,6 @@ case class CommitCount(
 object CommitCount {
   def apply(commit: CommitInfo, additions: Long, deletions: Long): CommitCount =
     CommitCount(
-      groupKey = commit.authorEmailAddress,
       authorName = commit.authorName,
       authorEmailAddress = commit.authorEmailAddress,
       authorTime = commit.authorTime,

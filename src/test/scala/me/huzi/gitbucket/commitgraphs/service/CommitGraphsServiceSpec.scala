@@ -7,6 +7,8 @@ import scala.util.Using
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.PersonIdent
 import org.scalatest.funsuite.AnyFunSuite
+import gitbucket.core.model.Account
+import gitbucket.core.service.AccountService
 import gitbucket.core.util.FileUtil
 import gitbucket.core.util.JGitUtil.CommitInfo
 
@@ -16,7 +18,24 @@ class CommitGraphsServiceSpec extends AnyFunSuite {
     Date.from(LocalDate.parse(d).atTime(hour, 0).atZone(ZoneId.systemDefault).toInstant)
 
   private def count(email: String, date: String, additions: Long, deletions: Long = 0, hour: Int = 12) =
-    CommitCount(email, email.takeWhile(_ != '@'), email, day(date, hour), additions, deletions)
+    CommitCount(email.takeWhile(_ != '@'), email, day(date, hour), additions, deletions)
+
+  private def account(userName: String, mailAddress: String) =
+    Account(
+      userName = userName,
+      fullName = userName,
+      mailAddress = mailAddress,
+      password = "",
+      isAdmin = false,
+      url = None,
+      registeredDate = day("2026-01-01"),
+      updatedDate = day("2026-01-01"),
+      lastLoginDate = None,
+      image = None,
+      isGroupAccount = false,
+      isRemoved = false,
+      description = None
+    )
 
   test("sumNumstat sums additions and deletions") {
     val lines = Seq(
@@ -66,14 +85,41 @@ class CommitGraphsServiceSpec extends AnyFunSuite {
     )
   }
 
+  test("aggregate groups all addresses of a GitBucket account, ignoring case") {
+    val alice = account("alice", "alice@example.com")
+    val accounts = Map("alice@example.com" -> alice, "alice.private@example.org" -> alice)
+    val graphs = CommitGraphsService.aggregate(
+      Seq(
+        count("alice@example.com", "2026-09-01", 1),
+        count("Alice@Example.com", "2026-09-02", 2),
+        count("alice.private@example.org", "2026-09-03", 3),
+        count("bob@example.com", "2026-09-01", 4)
+      ),
+      mail => accounts.get(mail.toLowerCase)
+    )
+    assert(
+      graphs.map(g => (g.userName, g.mailAddress, g.commits, g.additions)) == Seq(
+        ("alice", "alice@example.com", 3, 6),
+        ("bob", "bob@example.com", 1, 4)
+      )
+    )
+  }
+
+  test("aggregate groups addresses without an account ignoring case") {
+    val graphs = CommitGraphsService.aggregate(
+      Seq(count("bob@example.com", "2026-09-01", 1), count("Bob@Example.com", "2026-09-02", 2))
+    )
+    assert(graphs.map(g => (g.commits, g.additions)) == Seq((2, 3)))
+  }
+
   test("a commit counts for its author") {
     val c = CommitCount(commitInfo("Alice", "alice@example.com", "Alice", "alice@example.com"), 1, 0)
-    assert((c.groupKey, c.authorName, c.authorEmailAddress) == (("alice@example.com", "Alice", "alice@example.com")))
+    assert((c.authorName, c.authorEmailAddress) == (("Alice", "alice@example.com")))
   }
 
   test("a commit committed by someone else (rebase, cherry-pick) counts for its author") {
     val c = CommitCount(commitInfo("Bob", "bob@example.com", "Carol", "carol@example.com"), 1, 0)
-    assert((c.groupKey, c.authorName) == (("bob@example.com", "Bob")))
+    assert((c.authorName, c.authorEmailAddress) == (("Bob", "bob@example.com")))
   }
 
   test("getCommitGraphs reads the line counts with git") {
@@ -82,7 +128,8 @@ class CommitGraphsServiceSpec extends AnyFunSuite {
       commit(git, dir, "a.txt", "1\n", "Alice", "alice@example.com", "2026-09-02")
       commit(git, dir, "b.txt", "b\n", "Bob", "bob@example.com", "2026-09-02")
 
-      val graphs = new CommitGraphsService {}.getCommitGraphs(git, "git")
+      val graphs =
+        CommitGraphsService.aggregate(new CommitGraphsService with AccountService {}.getCommitCounts(git, "git"))
       assert(
         graphs.map(g => (g.userName, g.commits, g.additions, g.deletions)) == Seq(
           ("Alice", 2, 2, 1),

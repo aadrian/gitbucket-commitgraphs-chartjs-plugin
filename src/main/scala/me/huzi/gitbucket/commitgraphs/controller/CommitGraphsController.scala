@@ -6,6 +6,7 @@ import gitbucket.core.controller._
 import gitbucket.core.service._
 import gitbucket.core.util._
 import gitbucket.core.util.Directory._
+import gitbucket.core.util.Implicits._
 import org.scalatra.forms._
 import me.huzi.gitbucket.commitgraphs.service.{CommitGraphsService, CommitGraphsSettingsService}
 import me.huzi.gitbucket.commitgraphs.service.CommitGraphsSettingsService._
